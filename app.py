@@ -26,7 +26,7 @@ hf_model = SentenceTransformer("all-MiniLM-L6-v2")
 embedding_function = HFEmbeddingFunction(hf_model)
 
 # Init Chroma
-client = chromadb.PersistentClient(path=DB_PATH)
+client = chromadb.Client()
 collection = client.get_or_create_collection(
     name=COLLECTION_NAME,
     embedding_function=embedding_function
