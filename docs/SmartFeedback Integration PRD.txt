@@ -1,0 +1,97 @@
+SmartFeedback Integration PRD 
+Table of Contents
+Overview
+Business Objectives
+Success Metrics
+User Stories
+Technical Implementation
+Error Handling
+Success Criteria
+Overview  - This document outlines the requirements for integrating SmartFeedback, an automated new hire check-in tool, with Cadient's HMC platform. SmartFeedback conducts conversational surveys with frontline workers to surface issues and improve retention.
+Integration Points:
+Two-way data flow from Cadient ATAO database to SmartFeedback
+Automated new hire enrollment based on configurable triggers
+Real-time feedback summary retrieval
+UI integration within existing employee management workflows
+Business Objectives
+Proactively identify issues affecting new hire engagement and retention
+Give every frontline worker a voice to provide candid feedback
+Automate new hire check-in process to reduce manager workload
+Surface actionable insights to improve onboarding and training programs
+Success Metrics
+25% reduction in 90-day turnover for roles using SmartFeedback
+80% enrollment rate for eligible new hires
+50% of issues surfaced by SmartFeedback resolved within 2 weeks
+90% manager adoption within 3 months of launch
+4/5 average rating for "my voice is heard" on engagement survey
+User Stories Story 1:
+ Automatic SmartFeedback Enrollment - I want new hires to be automatically enrolled in SmartFeedback check-ins when they meet certain criteria.
+User Journey with API Details:
+Step 1: New hire added in ATAO(candidates with hire status)
+User sees: New employee record created through normal process
+Backend: Employee data stored in ATAO database
+Trigger condition: Employee start date in eligible role
+Step 2: Database trigger activates
+Database Event: ATAO DB trigger fires when new hire meets criteria
+API Called: POST /smartfeedback/api/v1/employees
+What we send: { "employee_data": { "email": "john.doe@email.com",
+ "first_name": "John", "last_name": "Doe", "phone": "+1-555-0123" }, "job_id": "job_67890", "client_id": "cadient_client_456"}
+Step 3: SmartFeedback enrolls employee
+SmartFeedback: Creates employee profile
+SmartFeedback: Schedules check-in based on role
+Step 4: Employee completes check-ins
+Employee: Receives periodic text calls
+SmartFeedback: Conducts conversational survey
+SmartFeedback: Analyzes responses and generates summary
+Story 2:
+ Viewing SmartFeedback Summaries As a manager, I want to see SmartFeedback summaries so I can proactively address new hire challenges.
+User Journey with API Details:
+Step 1: SmartFeedback completes check-in
+SmartFeedback: Employee completes survey
+API Called: POST /cadient/api/v1/smartfeedback-summary
+What SmartFeedback sends: { "job_id": "job_67890", "client_id": "cadient_client_456", "employee_data": { "email": "john.doe@email.com", "first_name": "John", "last_name": "Doe", "phone": "+1-555-0123" }, "check_in_date": "2025-03-15", "summary": "John is feeling overwhelmed with the pace of training. He's struggling to keep up with the volume of new information. Worried his performance is below expectations.", "sentiment_score": -0.6, "key_themes": [ "training overload", "performance anxiety" ], "raw_transcript_url": "https://smartfeedback.com/transcripts/check_in_12345" }
+Step 2: Cadient updates database
+API Called: Internal database update
+Data stored: SmartFeedback summary added to employee record
+Notification: Manager receives alert of new feedback
+Step 3: Manager views summary in HMC
+User sees: SmartFeedback tab on employee profile
+UI Location: Employee profile → SmartFeedback tab
+Step 4: Manager takes appropriate action
+User determines: Follow up 1:1 meeting, training adjustment, etc.
+System tracks: Issues identified and actions taken
+Detailed view:
+ ┌─────────────────────────────────────────────────────────────┐ │ SmartFeedback Summary - John Doe │ ├─────────────────────────────────────────────────────────────┤ │ Date: March 15, 2025 │ │ │ │ 😟 Sentiment: Negative (-0.6) │ │ │
+ │ 🗣️ Employee Feedback │ │ John is feeling overwhelmed with the pace of training. │ │ He's struggling to keep up with the volume of new │ │ information. Worried his performance is below │ │ expectations. │ │ │ │ 🏷️ Key Themes │ │ • Training overload │ │ • Performance anxiety │ │ │
+ │ [View Transcript] [Schedule 1:1] [Adjust Training] │ │ │ └─────────────────────────────────────────────────────────────┘
+Technical Implementation Database Integration New SmartFeedback Service Architecture:
+Technology: to be determined by tech team
+Database: Same ATAO database
+Connection: Same API Gateway as existing system
+API Endpoints Cadient APIs (Our Side): Endpoint Method Purpose /api/v1/smartfeedback-summary POST Receive summary from SmartFeedback
+SmartFeedback APIs (Vendor Side):
+ Endpoint Method Purpose /smartfeedback/api/v1/employees POST Send new hire for enrollment
+Story 3:
+ Viewing SmartFeedback in the HMC 
+As a recruiter or hiring manager, I want to access smartfeedback product within the HMC The iframe code will be provided by culture os 
+ 
+
+
+
+
+Error Handling Common Error Scenarios:
+SmartFeedback API Unavailable ┌─────────────────────────────────────────────────────────────┐ │ ⚠️ SmartFeedback Temporarily Unavailable │ ├─────────────────────────────────────────────────────────────┤ │ Unable to enroll employee in SmartFeedback right now. │ │ │
+ │ Options: │ │ • Try again in a few minutes │ │ • Proceed without SmartFeedback │ │ • Add to retry queue for automatic enrollment │ │ │ │ [Try Again] [Skip SmartFeedback] [Add to Queue] │
+ └─────────────────────────────────────────────────────────────┘
+
+
+Employee Unsubscribed - Handle by SmartFeedback
+
+
+
+Success Criteria
+
+ Technical Success:
+99.5% uptime for SmartFeedback integration
+<3 second response time for displaying summaries
+<1% failed API calls
