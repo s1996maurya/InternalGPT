@@ -1,75 +1,29 @@
-# ingest_docs_gemini.py (fixed)
 import os
 import glob
-import chromadb
-from sentence_transformers import SentenceTransformer
+import pickle
+import faiss
+import numpy as np
 import pandas as pd
-# ---------- CONFIG ----------
-DB_PATH = "./chroma_db"
-COLLECTION_NAME = "prd_knowledge"
+from docx import Document
+from PyPDF2 import PdfReader
+from sentence_transformers import SentenceTransformer
 
-# HuggingFace embedding model
+DB_PATH = "./faiss_index"
+INDEX_FILE = os.path.join(DB_PATH, "docs.index")
+META_FILE = os.path.join(DB_PATH, "meta.pkl")
+os.makedirs(DB_PATH, exist_ok=True)
+
 hf_model = SentenceTransformer("all-MiniLM-L6-v2")
+dimension = hf_model.get_sentence_embedding_dimension()
 
-# Define embedding function wrapper
-class HFEmbeddingFunction:
-    def __init__(self, model):
-        self.model = model
+if os.path.exists(INDEX_FILE):
+    index = faiss.read_index(INDEX_FILE)
+    with open(META_FILE, "rb") as f:
+        docs, meta = pickle.load(f)
+else:
+    index = faiss.IndexFlatL2(dimension)
+    docs, meta = [], []
 
-    def __call__(self, input: list[str]) -> list[list[float]]:
-        return self.model.encode(input).tolist()
-
-    def name(self):
-        return "hf-sentence-transformers"
-
-embedding_function = HFEmbeddingFunction(hf_model)
-
-# Init Chroma
-client = chromadb.PersistentClient(path=DB_PATH)
-collection = client.get_or_create_collection(
-    name=COLLECTION_NAME,
-    embedding_function=embedding_function
-)
-
-# Load files (txt for demo)
-'''
-def load_files(folder="./docs"):
-    data = []
-    for file in glob.glob(f"{folder}/*.txt"):
-        with open(file, "r", encoding="utf-8") as f:
-            text = f.read()
-            data.append((file, text))
-    return data
-'''
-def load_files(folder="./docs"):
-    data = []
-    for file in glob.glob(f"{folder}/*"):
-        ext = file.split(".")[-1].lower()
-
-        if ext == "txt":
-            with open(file, "r", encoding="utf-8") as f:
-                text = f.read()
-                data.append((file, text))
-
-        elif ext == "csv":
-            df = pd.read_csv(file)
-            # Combine all rows into one big string
-            text = df.to_string(index=False)
-            data.append((file, text))
-
-        elif ext == "xlsx":
-            df = pd.read_excel(file, sheet_name=None)  # load all sheets
-            for sheet, sdf in df.items():
-                text = sdf.to_string(index=False)
-                data.append((f"{file}::{sheet}", text))
-
-        else:
-            print(f"Skipping unsupported file: {file}")
-    
-    return data
-
-
-# Chunk text
 def chunk_text(text, size=500, overlap=50):
     words = text.split()
     chunks = []
@@ -78,21 +32,43 @@ def chunk_text(text, size=500, overlap=50):
         chunks.append(chunk)
     return chunks
 
-# Ingest
+def embed_and_store(chunks, source):
+    vectors = hf_model.encode(chunks)
+    index.add(np.array(vectors, dtype="float32"))
+    docs.extend(chunks)
+    meta.extend([source] * len(chunks))
+
+def ingest_file(file):
+    ext = file.split(".")[-1].lower()
+    text_data = []
+    if ext == "txt":
+        with open(file, "r", encoding="utf-8") as f:
+            text_data.append((file, f.read()))
+    elif ext == "csv":
+        df = pd.read_csv(file)
+        text_data.append((file, df.to_string(index=False)))
+    elif ext == "xlsx":
+        df = pd.read_excel(file, sheet_name=None)
+        for sheet, sdf in df.items():
+            text_data.append((f"{file}::{sheet}", sdf.to_string(index=False)))
+    elif ext in ["doc", "docx"]:
+        doc = Document(file)
+        text_data.append((file, "\n".join([p.text for p in doc.paragraphs if p.text.strip()])))
+    elif ext == "pdf":
+        reader = PdfReader(file)
+        text_data.append((file, "\n".join([page.extract_text() or "" for page in reader.pages])))
+
+    for fname, text in text_data:
+        chunks = chunk_text(text)
+        embed_and_store(chunks, fname)
+        print(f"✅ Ingested {len(chunks)} chunks from {fname}")
+
 if __name__ == "__main__":
-    docs = load_files("./docs")
-    ids, texts, metas = [], [], []
+    for file in glob.glob("./docs/*"):
+        ingest_file(file)
 
-    for file, text in docs:
-        for i, chunk in enumerate(chunk_text(text)):
-            ids.append(f"{file}_{i}")
-            texts.append(chunk)
-            metas.append({"source": file})
+    faiss.write_index(index, INDEX_FILE)
+    with open(META_FILE, "wb") as f:
+        pickle.dump((docs, meta), f)
 
-    collection.add(
-        documents=texts,
-        ids=ids,
-        metadatas=metas
-    )
-
-    print(f"✅ Ingested {len(texts)} chunks into ChromaDB")
+    print("✅ Ingestion complete. FAISS index saved.")
