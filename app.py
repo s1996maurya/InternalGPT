@@ -75,7 +75,22 @@ def search(query, top_k=3):
 
 # ---------- STREAMLIT UI ----------
 st.set_page_config(page_title="Internal GPT Assistant", page_icon="🤖")
-st.title("🤖 Internal GPT Assistant (FAISS Edition)")
+st.title("🤖 Internal GPT Assistant")
+st.markdown("""
+---
+### ℹ️ About This App
+
+This is an **Internal AI Assistant** powered by **FAISS vector search** and **Google Gemini**.  
+You can upload PRDs, configuration documents, bug reports, and more (TXT, CSV, XLSX, DOCX, PDF).  
+The assistant will **chunk, embed, and index** them in real time, allowing you to:
+
+- 🔍 **Ask questions** about requirements, configurations, and bugs.  
+- 🧠 Get **context-aware answers** based only on uploaded documents.  
+- 📂 See **document sources** for every response (for traceability).  
+
+⚠️ **Note:** This is a pilot version. Data is stored in-memory and will reset when the app restarts.
+""")
+
 
 uploaded_files = st.file_uploader(
     "Upload PRDs, Configs, Bug Reports (TXT, CSV, XLSX, DOCX, PDF)",
