@@ -1,8 +1,10 @@
 streamlit
-chromadb
 sentence-transformers
 google-generativeai
 PyPDF2
 python-docx
 openpyxl
 pandas
+faiss-cpu
+langchain
+pysqlite3-binary
