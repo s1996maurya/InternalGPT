@@ -8,3 +8,4 @@ pandas
 faiss-cpu
 langchain
 pysqlite3-binary
+chromadb
