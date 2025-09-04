@@ -107,12 +107,22 @@ if "chat_history" not in st.session_state:
 
 query = st.chat_input("Ask me about PRDs, configs, or bugs...")
 
+prompt = f"""
+You are an internal product assistant. 
+Use the provided context to answer the question **clearly and concisely**. 
+- If the context contains multiple relevant points, summarize them into a helpful answer.  
+- Do not copy and paste large chunks of context verbatim.  
+- If the context does not contain the answer, say "I could not find that information in the documents."
+
+
+"""
+
 if query:
     docs, sources = search(query, top_k=3)
     context = "\n\n".join(docs)
 
     response = gemini_model.generate_content(
-        f"Answer the question using only the context.\n\nQuestion: {query}\n\nContext:\n{context}"
+        f"{prompt}.\n\nQuestion: {query}\n\nContext:\n{context}"
     )
     answer = response.text
     st.session_state.chat_history.append((query, answer, sources))
